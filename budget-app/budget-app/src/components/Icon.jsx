@@ -39,6 +39,9 @@ export default function Icon({ name, className = 'w-5 h-5' }) {
     ),
     x: (
       <path strokeLinecap="round" strokeLinejoin="round" d="M18 6 6 18M6 6l12 12" />
+    ),
+    repeat: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 2l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3" />
     )
   }
 

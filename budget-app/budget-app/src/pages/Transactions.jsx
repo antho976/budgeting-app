@@ -3,15 +3,15 @@ import { Card, Btn, Input, Select } from '../components/ui'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
 import { COLORS } from '../constants'
+import { fmt } from '../utils'
 
-const fmt = (n) => '$' + Math.round(n).toLocaleString('en-CA')
-
-export default function Transactions({ categories, transactions, onAdd, onDelete }) {
+export default function Transactions({ categories, transactions, onAdd, onEdit, onDelete }) {
   const [showAdd, setShowAdd] = useState(false)
+  const [editTarget, setEditTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('all')
   const [filterMonth, setFilterMonth] = useState('all')
-  const [confirmDelete, setConfirmDelete] = useState(null) // transaction id
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   // Build list of available months from transactions
   const months = useMemo(() => {
@@ -113,6 +113,20 @@ export default function Transactions({ categories, transactions, onAdd, onDelete
                   <div className="text-xs text-slate-400 mt-0.5">{cat?.name ?? 'Unknown'} · {t.date}</div>
                 </div>
                 <span className="text-sm font-semibold tabular-nums flex-shrink-0">{fmt(t.amount)}</span>
+                {!t.fromRecurring && (
+                  <button
+                    onClick={() => setEditTarget(t)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
+                    aria-label="Edit"
+                  >
+                    <Icon name="pencil" className="w-4 h-4" />
+                  </button>
+                )}
+                {t.fromRecurring && (
+                  <span className="p-1.5 text-indigo-400 flex-shrink-0" title="Auto-generated from recurring">
+                    <Icon name="repeat" className="w-4 h-4" />
+                  </span>
+                )}
                 <button
                   onClick={() => setConfirmDelete(t.id)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors flex-shrink-0"
@@ -132,6 +146,16 @@ export default function Transactions({ categories, transactions, onAdd, onDelete
           categories={categories}
           onAdd={(tx) => { onAdd(tx); setShowAdd(false) }}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editTarget && (
+        <EditTransactionModal
+          transaction={editTarget}
+          categories={categories}
+          onSave={(updated) => { onEdit(updated); setEditTarget(null) }}
+          onClose={() => setEditTarget(null)}
         />
       )}
 
@@ -196,6 +220,49 @@ function AddTransactionModal({ categories, onAdd, onClose }) {
         <Select label="Category" value={form.category}
           onChange={e => { setForm(f => ({ ...f, category: e.target.value })); setErrors(er => ({ ...er, category: '' })) }}
           error={errors.category}>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </Select>
+        <Input label="Date" type="date" value={form.date}
+          onChange={e => { setForm(f => ({ ...f, date: e.target.value })); setErrors(er => ({ ...er, date: '' })) }}
+          error={errors.date} />
+      </div>
+    </Modal>
+  )
+}
+
+function EditTransactionModal({ transaction, categories, onSave, onClose }) {
+  const [form, setForm] = useState({
+    desc: transaction.desc || '',
+    amount: String(transaction.amount),
+    category: transaction.category,
+    date: transaction.date
+  })
+  const [errors, setErrors] = useState({})
+
+  const submit = () => {
+    const e = {}
+    const amt = parseFloat(form.amount)
+    if (isNaN(amt) || amt <= 0) e.amount = 'Enter a positive amount'
+    if (!form.date) e.date = 'Pick a date'
+    if (Object.keys(e).length) { setErrors(e); return }
+    onSave({ ...transaction, desc: form.desc.trim(), amount: amt, category: form.category, date: form.date })
+  }
+
+  return (
+    <Modal title="Edit Transaction" onClose={onClose} footer={
+      <>
+        <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={submit}>Save</Btn>
+      </>
+    }>
+      <div className="flex flex-col gap-3">
+        <Input label="Description (optional)" type="text" placeholder="e.g. Groceries" value={form.desc}
+          onChange={e => setForm(f => ({ ...f, desc: e.target.value }))} autoFocus />
+        <Input label="Amount" type="number" step="0.01" placeholder="0.00" value={form.amount}
+          onChange={e => { setForm(f => ({ ...f, amount: e.target.value })); setErrors(er => ({ ...er, amount: '' })) }}
+          error={errors.amount} />
+        <Select label="Category" value={form.category}
+          onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
         <Input label="Date" type="date" value={form.date}

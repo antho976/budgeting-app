@@ -75,6 +75,7 @@ export function Card({ children, className = '' }) {
 export function StatCard({ label, value, sub, tone }) {
   const tones = {
     danger:  'text-red-500',
+    warning: 'text-amber-500',
     success: 'text-green-500',
     normal:  'text-slate-900 dark:text-white'
   }
